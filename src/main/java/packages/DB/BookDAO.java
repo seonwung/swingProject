@@ -36,12 +36,37 @@ public class BookDAO {
                             .publisher(rs.getString("publisher"))
                                     .stock(rs.getInt("stock"))
                             .imagePath(rs.getString("image_path"))
+                                    .total_rent_count(rs.getInt("total_rent_count"))
                             .build());
                 }
            // System.out.println(sql); 확인용
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        return list;
+    }
+    public List<Book> getBestSellerBooks(int limit) {
+        List<Book> list = new ArrayList<>();
+        String sql = "SELECT * FROM book ORDER BY total_rent_count DESC LIMIT ?";
+        try (Connection conn = DBConnector.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, limit);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                list.add(Book.builder()
+                        .book_id(rs.getInt("book_id"))
+                        .title(rs.getString("title"))
+                        .author(rs.getString("author"))
+                        .publisher(rs.getString("publisher"))
+                        .stock(rs.getInt("stock"))
+                        .imagePath(rs.getString("image_path"))
+                        .total_rent_count(rs.getInt("total_rent_count"))
+                        .build());
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         return list;
     }
 

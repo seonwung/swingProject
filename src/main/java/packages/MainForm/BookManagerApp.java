@@ -13,22 +13,25 @@ import java.awt.event.MouseEvent;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class BookManagerApp extends JFrame {
-    private JPanel topBar;
-    private JPanel mainContentPanel; //
+    private JPanel topBar; //상단바
+    private JPanel mainContentPanel; // 메인패널
     private JComboBox<String> sortCombo;
     private JComboBox<String> orderCombo;
     private JPanel topResultPanel;
     private JScrollPane scrollPane;
     private JPanel resultContentPanel;
-
+  private   JPanel bookPanel;
     private List<Book> lastSearchResults = null;
     private String lastKeyword = "";
-
+    private List<Book> bestsellerBooks = new ArrayList<>();
+    private int startIndex = 0; // 현재 보여지는 시작 인덱스
+    private JPanel bookRow;
     public BookManagerApp() {
         setTitle("도서 관리 프로그램 v1.0");
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -73,7 +76,7 @@ public class BookManagerApp extends JFrame {
 
         add(topBar, BorderLayout.NORTH);
         //보더로 바꿔서 탑바 고정시킴..
-        mainContentPanel = new JPanel(new MigLayout("wrap 1", "[grow]", "[]"));
+        mainContentPanel = new JPanel(new MigLayout("wrap 1,debug", "[grow]", "[]"));
         add(mainContentPanel, BorderLayout.CENTER);
 
         //  초기화면
@@ -108,28 +111,38 @@ public class BookManagerApp extends JFrame {
         bestTitle.setFont(bestTitle.getFont().deriveFont(Font.BOLD, 20f));
         mainContentPanel.add(bestTitle, "align left");
 
-        JPanel bookPanel = new JPanel(new MigLayout("", "[][][]", "[]"));
-        bookPanel.add(new JButton("<"), "align left, split 3");
+        bookPanel = new JPanel(new MigLayout("", "[][][]", "[]"));
 
-        JPanel bookRow = new JPanel(new MigLayout("", "[][][][][]", "[]"));
-        List<Book> books = List.of(
-                Book.builder().title("베스트셀러 절대로 읽지 마라").imagePath("book1.jpg").build(),
-                Book.builder().title("세이노의 가르침").imagePath("book2.png").build(),
-                Book.builder().title("죽고 싶지만 떡볶이는 먹고 싶어.").imagePath("book3.jpeg").build(),
-                Book.builder().title("돈의 심리학").imagePath("book4.jpg").build()
-        );
-        for (Book book : books) {
-            JPanel card = createBookCard(book.getTitle(), book.getImagePath());
-            bookRow.add(card);
-        }
+        // 좌측 <
+        JButton leftBtn = new JButton("<");
+        leftBtn.addActionListener(e -> {
+            startIndex = (startIndex - 1 + bestsellerBooks.size()) % bestsellerBooks.size();
+            updateBookRow(); // 업데이트
+        });
+        bookPanel.add(leftBtn, "align left, split 3");
+
+        // 책 목록 그리는 패널
+        bookRow = new JPanel(new MigLayout("", "[][][][]", "[]"));
         bookPanel.add(bookRow, "align center");
-        bookPanel.add(new JButton(">"));
+
+        // 우측 >
+        JButton rightBtn = new JButton(">");
+        rightBtn.addActionListener(e -> {
+            startIndex = (startIndex + 1) % bestsellerBooks.size();
+            updateBookRow();
+        });
+        bookPanel.add(rightBtn);
 
         mainContentPanel.add(bookPanel, "align center");
 
         JLabel totalRental = new JLabel("누적 대여량 높은 순");
         totalRental.setFont(totalRental.getFont().deriveFont(Font.BOLD, 20f));
         mainContentPanel.add(totalRental, "align left");
+
+        // 도서 가져오기 및 초기 렌더링
+        BookDAO dao = new BookDAO();
+        bestsellerBooks = dao.getBestSellerBooks(10); // total_rent_count 기준 상위 10권
+        updateBookRow(); // 첫 렌더링
 
         mainContentPanel.revalidate();
         mainContentPanel.repaint();
@@ -253,8 +266,13 @@ public class BookManagerApp extends JFrame {
 
     private JPanel createBookCard(String title, String imagePath) {
         JPanel panel = new JPanel(new MigLayout("wrap 1", "center", "[]10[]"));
+        panel.setPreferredSize(new Dimension(140, 230));//패널 크기 고정
         URL imgURL = getClass().getResource("/" + imagePath);
         JLabel image = new JLabel();
+        image.setPreferredSize(new Dimension(120, 160));
+        image.setHorizontalAlignment(SwingConstants.CENTER);
+        image.setVerticalAlignment(SwingConstants.CENTER);
+
         if (imgURL != null) {
             image.setIcon(new ImageIcon(
                     new ImageIcon(imgURL).getImage().getScaledInstance(120, 160, Image.SCALE_SMOOTH)
@@ -263,11 +281,25 @@ public class BookManagerApp extends JFrame {
             image.setText("이미지 없음");
         }
 
-        JLabel label = new JLabel(title);
+        JLabel label = new JLabel("<html><div style='text-align: center; width: 120px;'>"
+                + title + "</div></html>"); //길이 길면 아래로
+        label.setPreferredSize(new Dimension(120, 40));
         label.setHorizontalAlignment(SwingConstants.CENTER);
         panel.add(image);
         panel.add(label);
         return panel;
+    }
+
+    private void updateBookRow() {
+        bookRow.removeAll();
+        for (int i = 0; i < 4; i++) {
+            int index = (startIndex + i) % bestsellerBooks.size();
+            Book book = bestsellerBooks.get(index);
+            JPanel card = createBookCard(book.getTitle(), book.getImagePath());
+            bookRow.add(card);
+        }
+        bookRow.revalidate();
+        bookRow.repaint();
     }
 
     public static void main(String[] args) {
@@ -278,4 +310,5 @@ public class BookManagerApp extends JFrame {
         }
         SwingUtilities.invokeLater(BookManagerApp::new);
     }
+
 }
