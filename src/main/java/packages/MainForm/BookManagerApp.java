@@ -74,9 +74,12 @@ public class BookManagerApp extends JFrame {
         JButton loginBtn = new JButton("로그인");
         topBar.add(loginBtn, "align right, gapleft 50");
 
+        loginBtn.addActionListener(e -> {
+            new LoginForm(this).setVisible(true);
+        });
         add(topBar, BorderLayout.NORTH);
         //보더로 바꿔서 탑바 고정시킴..
-        mainContentPanel = new JPanel(new MigLayout("wrap 1,debug", "[grow]", "[]"));
+        mainContentPanel = new JPanel(new MigLayout("wrap 1", "[grow]", "[]"));
         add(mainContentPanel, BorderLayout.CENTER);
 
         //  초기화면
